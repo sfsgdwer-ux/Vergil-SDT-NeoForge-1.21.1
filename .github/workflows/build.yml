@@ -26,6 +26,51 @@ jobs:
         with:
           gradle-version: '9.2.1'
 
+      # An uploaded SDT_Assets.zip can be unpacked into the JAR as raw resources.
+      # Resource inclusion does NOT implement the SDT transformation renderer.
+      - name: Import optional SDT model resources
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          archives = [Path("SDT_Assets.zip"), Path("SDT_Assets(1).zip")]
+          archive = next((p for p in archives if p.is_file()), None)
+
+          if archive is None:
+              print("No SDT_Assets.zip found; compiling keybind/particles prototype only.")
+          else:
+              patterns = [
+                  r"^assets/invincible_dmc/animmodels/entity/sin_devil_armor\.json$",
+                  r"^assets/invincible_dmc/animmodels/animations/biped/yamato/living/(?:data/)?yamato_sin_devil_trigger(?:_back)?\.json$",
+                  r"^assets/invincible_dmc/animmodels/animations/biped/yamato/living/yamato_(?:idle(?:_2(?:_start)?|_3)?|walk(?:_lockon)?|run|sneak|jump)\.json$",
+                  r"^assets/invincible_dmc/models/obj/sdt\.obj$",
+                  r"^assets/invincible_dmc/textures/models/obj/sdt(?:_l)?\.png$",
+                  r"^assets/invincible_dmc/textures/mesh/sin_devil/[^/]+\.png$",
+              ]
+              root = Path("src/main/resources").resolve()
+              extracted = []
+              with ZipFile(archive) as zip_file:
+                  for entry in zip_file.infolist():
+                      name = entry.filename
+                      if entry.is_dir() or not any(re.fullmatch(p, name) for p in patterns):
+                          continue
+                      target = (root / name).resolve()
+                      if not target.is_relative_to(root):
+                          raise ValueError("Unexpected zip path: " + name)
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      target.write_bytes(zip_file.read(entry))
+                      extracted.append(name)
+
+              print(f"Imported {len(extracted)} model/animation/texture files from {archive.name}:")
+              for name in extracted:
+                  print(" +", name)
+              if not extracted:
+                  raise RuntimeError("Uploaded SDT_Assets.zip contains no expected model resources")
+          PY
+
       - name: Build prototype JAR
         run: gradle --no-daemon build --stacktrace
 
