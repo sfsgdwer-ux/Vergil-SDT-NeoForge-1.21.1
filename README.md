@@ -1,30 +1,26 @@
 # Vergil SDT – NeoForge 1.21.1
 
-**Status: cosmetic prototype. The complete Devil May Cry Sin Devil Trigger transformation is NOT implemented.**
+**Status: experimental in-world 3D transformation preview, NOT the full original animation port.**
 
-## Already implemented
-- Key **V** toggles a local cosmetic state and cyan soul-fire particles.
-- Thai and English keybind/status text.
-- No attack buffs, HP change, or gameplay modification.
-- A GitHub Actions build using Minecraft 1.21.1, NeoForge 21.1.265 and Java 21.
+## In this version
+- Press **V** to toggle your local player's visual form.
+- Replaces the normal third-person player model with the original SDT **Blockbench OBJ** mesh when it loads successfully.
+- Uses the SDT OBJ diffuse texture and optional soul-fire particle effect.
+- Retains Minecraft's original HP, attributes, speed and combat.
+- Key mapping is registered correctly on the NeoForge MOD event bus.
+- A failed/missing OBJ falls back to the vanilla player render.
 
-## How to import the source model resources
-1. On GitHub, choose **Add file → Upload files**.
-2. Upload **SDT_Assets.zip** to the **root of this repository**. Keep the ZIP name exactly `SDT_Assets.zip` (alternatively `SDT_Assets(1).zip`).
-3. Commit the change to `main`.
-4. The [Actions](../../actions) workflow automatically finds the ZIP, extracts SDT OBJ, textures and JSON animations, and bundles them into the new JAR.
-5. Download **Vergil-SDT-Prototype-JAR** from the successful workflow run, extract the artifact ZIP, and use the inner JAR in your NeoForge mods folder.
+## Important limitations
+- **Static mesh only**. The original transform, untransform, idle, walk, run, and fly skeletal animations are not yet played.
+- The OBJ is independent of Epic Fight's armature; the original Sin Devil Trigger armor mesh JSON uses weighted skinning, which needs a renderer/armature port.
+- Other clients do not see your transformation; local 3rd-person rendering only.
+- Epic Fight/Avalon replacement rendering has **not** been verified in a running game.
+- Orientation, model scale, clipping, lighting, transparency and animation still need in-game testing.
 
-**Important:** This step only **includes the model resources in the JAR**; it **does not render the original Vergil SDT model**. An actual player renderer, matching animation armature and Epic Fight integration must be ported from Forge 1.20.1 to NeoForge 1.21.1.
+## How to build
+The GitHub Actions build reads `SDT_Assets.zip` (or `SDT_Assets(1).zip`) from the repository root, extracts the relevant OBJ/model/animation resources, and builds a `.jar` using Java 21 + NeoForge 21.1.265. Open [Actions](../../actions), select the latest successful run, and download `Vergil-SDT-Prototype-JAR`.
 
-Do **not** upload `SDT_Code.zip` to the public repository: Forge 1.20.1 compiled classes cannot be used directly as NeoForge 1.21.1 classes. Compiled classes are for examining original behavior, not for blindly including in the JAR.
+Place the extracted `.jar` in `.minecraft/mods` on Minecraft 1.21.1 NeoForge.
 
-## Licensing / privacy
-This repo is public. Only upload extracted original mod assets if you have permission to redistribute them publicly, including any DMC-derived assets. If permission covers only personal use, change the repository to **Private** before uploading the ZIP.
-
-## Features yet to be ported
-- SDT player mesh replacement and textures
-- Original transform/untransform, idle, walk/run, and fly animations
-- Epic Fight custom mesh/armature synchronization
-- Other-player visibility/networking
-- Original SDT effects
+## Rights
+Redistribute the assets only if their creator's permission extends to the publicly accessible repository and to any third-party game IP. This repository was created from user-supplied files.
