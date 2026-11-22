@@ -1,26 +1,20 @@
 # Vergil SDT – NeoForge 1.21.1
 
-**Status: experimental in-world 3D transformation preview, NOT the full original animation port.**
+## 0.2.0 animated 3D preview (experimental)
 
-## In this version
-- Press **V** to toggle your local player's visual form.
-- Replaces the normal third-person player model with the original SDT **Blockbench OBJ** mesh when it loads successfully.
-- Uses the SDT OBJ diffuse texture and optional soul-fire particle effect.
-- Retains Minecraft's original HP, attributes, speed and combat.
-- Key mapping is registered correctly on the NeoForge MOD event bus.
-- A failed/missing OBJ falls back to the vanilla player render.
+- V toggles the local third-person character into and out of the user-supplied Vergil Sin Devil Trigger OBJ model.
+- Original transformation and return animation JSON are loaded, and their quaternion rotations are applied as approximate relative transforms to selected OBJ bone-named parts.
+- The model has basic procedural idle breathing, walking and running motion after transformation.
+- Model size and ground alignment are normalized.
+- No HP, hitbox, movement speed, damage or skills are changed.
 
-## Important limitations
-- **Static mesh only**. The original transform, untransform, idle, walk, run, and fly skeletal animations are not yet played.
-- The OBJ is independent of Epic Fight's armature; the original Sin Devil Trigger armor mesh JSON uses weighted skinning, which needs a renderer/armature port.
-- Other clients do not see your transformation; local 3rd-person rendering only.
-- Epic Fight/Avalon replacement rendering has **not** been verified in a running game.
-- Orientation, model scale, clipping, lighting, transparency and animation still need in-game testing.
+### Caveats
+- The original weighted mesh and full Epic Fight skeleton are NOT ported. This version approximates keyframe movements using independent OBJ groups, so parts may clip or stretch and unassigned 'cube' groups remain static.
+- Full original idle, walk, run and flying animation JSON are not included in the current asset ZIP, so locomotion is procedural rather than exact.
+- It renders only the local player's transformation and does not synchronize it over multiplayer.
+- Render compatibility with Epic Fight/Avalon is not validated, and the build has not been tested in-game.
+- The GitHub Actions job automatically extracts original model assets from SDT_Assets.zip at the repository root.
 
-## How to build
-The GitHub Actions build reads `SDT_Assets.zip` (or `SDT_Assets(1).zip`) from the repository root, extracts the relevant OBJ/model/animation resources, and builds a `.jar` using Java 21 + NeoForge 21.1.265. Open [Actions](../../actions), select the latest successful run, and download `Vergil-SDT-Prototype-JAR`.
+Download the latest successful JAR from GitHub Actions. Extract the artifact ZIP and place the JAR inside your Minecraft 1.21.1 NeoForge mods directory.
 
-Place the extracted `.jar` in `.minecraft/mods` on Minecraft 1.21.1 NeoForge.
-
-## Rights
-Redistribute the assets only if their creator's permission extends to the publicly accessible repository and to any third-party game IP. This repository was created from user-supplied files.
+The original Devil Mine Craft targets Forge 1.20.1. Porting its classes directly to 1.21.1 is not supported. Verify redistribution rights for original assets in this public repository.

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.sfsgdwer.vergilsdt.VergilSdtMod;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
@@ -13,12 +14,12 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import org.lwjgl.glfw.GLFW;
 
-/**
- * Client-only cosmetic toggle. No combat, movement, HP or stats are changed.
- * Uses a custom static OBJ visual until Epic Fight skeletal animations are ported.
- */
+/** Cosmetic-only SDT transformation; never changes HP, attack power, or hitbox. */
 @EventBusSubscriber(modid = VergilSdtMod.MODID, value = Dist.CLIENT)
 public final class ClientHooks {
+    private static final float TRANSFORM_SECONDS = 0.9667F;
+    private static final float REVERT_SECONDS = 1.30F;
+
     static final KeyMapping TRANSFORM = new KeyMapping(
         "key.vergilsdt.transform",
         InputConstants.Type.KEYSYM,
@@ -26,50 +27,68 @@ public final class ClientHooks {
         "key.categories.vergilsdt"
     );
 
-    private static boolean transformed = false;
+    private static boolean transformed;
+    private static float switchedAtTick = -100000F;
+    private static LocalPlayer previousPlayer;
 
     private ClientHooks() {}
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) {
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) {
             transformed = false;
+            previousPlayer = null;
             return;
+        }
+        if (previousPlayer != player) {
+            transformed = false;
+            switchedAtTick = -100000F;
+            previousPlayer = player;
         }
 
         while (TRANSFORM.consumeClick()) {
             transformed = !transformed;
-            mc.player.displayClientMessage(
-                Component.translatable(transformed
-                    ? "message.vergilsdt.enabled"
-                    : "message.vergilsdt.disabled"),
-                true
-            );
+            switchedAtTick = player.tickCount;
+            player.displayClientMessage(Component.translatable(
+                transformed ? "message.vergilsdt.enabled" : "message.vergilsdt.disabled"
+            ), true);
         }
 
-        if (transformed && mc.player.tickCount % 4 == 0) {
-            double dx = (mc.player.getRandom().nextDouble() - 0.5D) * 0.9D;
-            double dz = (mc.player.getRandom().nextDouble() - 0.5D) * 0.9D;
-            double dy = mc.player.getRandom().nextDouble() * mc.player.getBbHeight();
-            mc.level.addParticle(
-                ParticleTypes.SOUL_FIRE_FLAME,
-                mc.player.getX() + dx,
-                mc.player.getY() + dy,
-                mc.player.getZ() + dz,
-                0.0D, 0.02D, 0.0D
-            );
+        float elapsed = (player.tickCount - switchedAtTick) / 20F;
+        boolean reverting = !transformed && elapsed < REVERT_SECONDS;
+        boolean transforming = transformed && elapsed < TRANSFORM_SECONDS;
+        if ((transformed || reverting) && player.tickCount % 3 == 0) {
+            int count = transforming || reverting ? 4 : 1;
+            for (int i = 0; i < count; i++) {
+                double dx = (player.getRandom().nextDouble() - 0.5D) * 1.25D;
+                double dz = (player.getRandom().nextDouble() - 0.5D) * 1.25D;
+                double dy = player.getRandom().nextDouble() * player.getBbHeight() * 1.1D;
+                mc.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME,
+                    player.getX() + dx, player.getY() + dy, player.getZ() + dz,
+                    0.0D, 0.025D, 0.0D);
+            }
         }
     }
 
     @SubscribeEvent
     public static void onPlayerRender(RenderPlayerEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (transformed && event.getEntity() == mc.player) {
-            // Do not cancel vanilla rendering unless the SDT mesh loaded successfully.
-            if (SdtObjRenderer.render(event)) {
-                event.setCanceled(true);
-            }
+        if (mc.player == null || event.getEntity() != mc.player) return;
+
+        float elapsed = (mc.player.tickCount + event.getPartialTick() - switchedAtTick) / 20F;
+        String clip;
+        if (transformed) {
+            clip = elapsed < TRANSFORM_SECONDS ? "transform" : null;
+        } else if (elapsed >= 0F && elapsed < REVERT_SECONDS) {
+            clip = "revert";
+        } else {
+            return;
+        }
+
+        if (SdtObjRenderer.render(event, clip, Math.max(0F, elapsed))) {
+            event.setCanceled(true);
         }
     }
 }

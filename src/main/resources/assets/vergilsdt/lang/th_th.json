@@ -1,6 +1,6 @@
 {
-  "key.vergilsdt.transform": "แปลงร่าง Sin Devil Trigger (ตัวอย่าง 3D)",
+  "key.vergilsdt.transform": "แปลงร่าง Sin Devil Trigger (3D)",
   "key.categories.vergilsdt": "Vergil SDT",
-  "message.vergilsdt.enabled": "เปิดการแสดงผลร่าง SDT แบบ 3D",
-  "message.vergilsdt.disabled": "คืนร่างปกติแล้ว"
+  "message.vergilsdt.enabled": "กำลังแปลงร่างเป็น SDT",
+  "message.vergilsdt.disabled": "กำลังคืนร่างมนุษย์"
 }

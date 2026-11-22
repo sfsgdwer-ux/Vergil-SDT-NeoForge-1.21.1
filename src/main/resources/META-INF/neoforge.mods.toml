@@ -4,12 +4,12 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "vergilsdt"
-version = "0.1.0"
-displayName = "Vergil SDT Cosmetic (Prototype)"
+version = "0.2.0"
+displayName = "Vergil SDT Cosmetic (Animated Preview)"
 authors = "Community port"
 description = '''
-Prototype for a standalone Sin Devil Trigger cosmetic transformation.
-The original SDT player mesh and animations are NOT ported in this build.
+Experimental client-side 3D OBJ visual preview with partial original SDT transform keyframes and procedural movement.
+This is not the original Epic Fight armature system.
 '''
 
 [[dependencies.vergilsdt]]

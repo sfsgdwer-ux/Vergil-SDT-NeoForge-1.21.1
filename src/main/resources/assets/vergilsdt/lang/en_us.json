@@ -1,6 +1,6 @@
 {
-  "key.vergilsdt.transform": "Toggle Sin Devil Trigger (3D Preview)",
+  "key.vergilsdt.transform": "Toggle Sin Devil Trigger (3D)",
   "key.categories.vergilsdt": "Vergil SDT",
-  "message.vergilsdt.enabled": "SDT 3D visual preview: ON",
-  "message.vergilsdt.disabled": "SDT 3D visual preview: OFF"
+  "message.vergilsdt.enabled": "Transforming into SDT",
+  "message.vergilsdt.disabled": "Returning to human form"
 }

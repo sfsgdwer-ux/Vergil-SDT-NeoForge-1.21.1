@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.sfsgdwer.vergilsdt'
-version = '0.1.0'
+version = '0.2.0'
 
 base {
     archivesName = 'Vergil-SDT-NeoForge-1.21.1'
@@ -14,13 +14,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 neoForge {
     version = '21.1.265'
-
-    runs {
-        client {
-            client()
-        }
-    }
-
+    runs { client { client() } }
     mods {
         vergilsdt {
             sourceSet(sourceSets.main)
