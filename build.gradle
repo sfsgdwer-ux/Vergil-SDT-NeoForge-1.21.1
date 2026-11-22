@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.sfsgdwer.vergilsdt'
-version = '0.3.0'
+version = '0.3.1'
 
 base {
     archivesName = 'Vergil-SDT-NeoForge-1.21.1'

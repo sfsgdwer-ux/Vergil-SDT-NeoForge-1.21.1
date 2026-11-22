@@ -33,7 +33,7 @@ final class SdtAnimationClip {
         if (CACHE.containsKey(clip)) return CACHE.get(clip);
 
         ResourceLocation file = ResourceLocation.fromNamespaceAndPath(
-            "invincible_dmc", "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger"
+            "vergilsdt", "sdt_data/animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger"
             + ("revert".equals(clip) ? "_back" : "") + ".json"
         );
         Map<String, Bone> bones = new HashMap<>();

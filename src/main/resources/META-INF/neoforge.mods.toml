@@ -4,7 +4,7 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "vergilsdt"
-version = "0.3.0"
+version = "0.3.1"
 displayName = "Vergil SDT Cosmetic (Rig Preview)"
 authors = "Community port"
 description = '''

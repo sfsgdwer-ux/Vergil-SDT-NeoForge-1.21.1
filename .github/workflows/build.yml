@@ -12,10 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Java 21
+      - name: Install Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,9 +26,7 @@ jobs:
         with:
           gradle-version: '9.2.1'
 
-      # An uploaded SDT_Assets.zip can be unpacked into the JAR as raw resources.
-      # Resource inclusion does NOT implement the SDT transformation renderer.
-      - name: Import optional SDT model resources
+      - name: Import SDT assets into a private resource path
         shell: bash
         run: |
           python3 - <<'PY'
@@ -36,79 +34,93 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
 
-          archives = [Path("SDT_Assets.zip"), Path("SDT_Assets(1).zip")]
-          archive = next((p for p in archives if p.is_file()), None)
-
+          archive = next((p for p in (Path("SDT_Assets.zip"), Path("SDT_Assets(1).zip")) if p.is_file()), None)
           if archive is None:
-              print("No SDT_Assets.zip found; compiling keybind/particles prototype only.")
-          else:
-              patterns = [
-                  r"^assets/invincible_dmc/animmodels/entity/sin_devil_armor\.json$",
-                  r"^assets/invincible_dmc/animmodels/animations/biped/yamato/living/(?:data/)?yamato_sin_devil_trigger(?:_back)?\.json$",
-                  r"^assets/invincible_dmc/animmodels/animations/biped/yamato/living/yamato_(?:idle(?:_2(?:_start)?|_3)?|walk(?:_lockon)?|run|sneak|jump)\.json$",
-                  r"^assets/invincible_dmc/models/obj/sdt\.obj$",
-                  r"^assets/invincible_dmc/textures/models/obj/sdt(?:_l)?\.png$",
-                  r"^assets/invincible_dmc/textures/mesh/sin_devil/[^/]+\.png$",
-              ]
-              root = Path("src/main/resources").resolve()
-              extracted = []
-              with ZipFile(archive) as zip_file:
-                  for entry in zip_file.infolist():
-                      source_name = entry.filename.replace("\\", "/")
-                      marker = "assets/invincible_dmc/"
-                      marker_index = source_name.find(marker)
-                      if marker_index < 0 or entry.is_dir():
-                          continue
-                      name = source_name[marker_index:]
-                      if not any(re.fullmatch(p, name) for p in patterns):
-                          continue
-                      target = (root / name).resolve()
-                      if not target.is_relative_to(root):
-                          raise ValueError("Unexpected zip path: " + name)
-                      target.parent.mkdir(parents=True, exist_ok=True)
-                      target.write_bytes(zip_file.read(entry))
-                      extracted.append(name)
+              raise RuntimeError("SDT_Assets.zip must be in repository root")
 
-              print("First archive entries:", zip_file.namelist()[:6])
-              print(f"Imported {len(extracted)} model/animation/texture files from {archive.name}:")
-              for name in extracted:
-                  print(" +", name)
-              armor_json = root / "assets/invincible_dmc/animmodels/entity/sin_devil_armor.json"
-              if armor_json.exists():
-                  import json
-                  obj = json.loads(armor_json.read_text(encoding="utf-8"))
-                  print("SDT ARMOR JSON root keys:", list(obj) if isinstance(obj, dict) else type(obj))
-                  print("SDT ARMOR JSON preview:", armor_json.read_text(encoding="utf-8")[:2200])
-                  def structure(v):
-                      if isinstance(v, dict):
-                          return {"kind":"dict","keys":list(v),"sample":{k:structure(x) for k,x in list(v.items())[:4]}}
-                      if isinstance(v, list):
-                          return {"kind":"list","length":len(v),"sample":v[:12] if not v or not isinstance(v[0],(dict,list)) else [structure(v[0])]}
-                      return v
-                  print("SDT ARMOR VERTICES SCHEMA:", {k:structure(v) for k,v in obj.get("vertices",{}).items()})
-                  print("SDT ARMOR FPS SCHEMA:", structure(obj.get("fps")))
-              obj_path = root / "assets/invincible_dmc/models/obj/sdt.obj"
-              if obj_path.exists():
-                  lines = obj_path.read_text(encoding="utf-8",errors="replace").splitlines()
-                  print("SDT OBJ:", "size",obj_path.stat().st_size,"lines",len(lines),"vertex",sum(x.startswith("v ") for x in lines),"faces",sum(x.startswith("f ") for x in lines))
-                  print("SDT OBJ header:",lines[:18])
-              for anim_name in ("yamato_sin_devil_trigger.json","yamato_sin_devil_trigger_back.json"):
-                  anim = root / "assets/invincible_dmc/animmodels/animations/biped/yamato/living" / anim_name
-                  if anim.exists():
-                      import json
-                      obj = json.loads(anim.read_text(encoding="utf-8"))
-                      print("SDT ANIMATION:", anim_name, "keys:", list(obj) if isinstance(obj, dict) else type(obj))
-                      print("SDT ANIMATION preview:", anim.read_text(encoding="utf-8")[:1000])
-              if not extracted:
-                  raise RuntimeError("Uploaded SDT_Assets.zip contains no expected model resources")
+          allowed = [
+              r"animmodels/entity/sin_devil_armor\.json",
+              r"animmodels/animations/biped/yamato/living/(?:data/)?yamato_sin_devil_trigger(?:_back)?\.json",
+              r"models/obj/sdt\.obj",
+              r"textures/models/obj/sdt(?:_l)?\.png",
+              r"textures/mesh/sin_devil/[^/]+\.png",
+          ]
+          prefix = "assets/invincible_dmc/"
+          destination = Path("src/main/resources/assets/vergilsdt/sdt_data").resolve()
+          imported = []
+
+          with ZipFile(archive) as z:
+              for entry in z.infolist():
+                  name = entry.filename.replace("\\", "/")
+                  if entry.is_dir():
+                      continue
+                  at = name.find(prefix)
+                  if at < 0:
+                      continue
+                  relative = name[at + len(prefix):]
+                  if not any(re.fullmatch(p, relative) for p in allowed):
+                      continue
+                  target = (destination / relative).resolve()
+                  if not target.is_relative_to(destination):
+                      raise RuntimeError("Unexpected ZIP entry: " + name)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(z.read(entry))
+                  imported.append(relative)
+
+          required = [
+              "models/obj/sdt.obj",
+              "textures/models/obj/sdt.png",
+              "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
+              "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json",
+          ]
+          missing = [path for path in required if path not in imported]
+          print("Imported", len(imported), "SDT resources in isolated assets/vergilsdt/sdt_data/")
+          print("Files:", imported)
+          if missing:
+              raise RuntimeError("Required SDT resources missing: " + str(missing))
+
+          # These paths are scanned by the original Epic Fight animation loader.
+          # This standalone cosmetic mod must NOT publish anything there.
+          original_namespace = Path("src/main/resources/assets/invincible_dmc")
+          if original_namespace.exists():
+              raise RuntimeError("Original Epic Fight resource namespace must not be bundled")
           PY
 
-      - name: Build prototype JAR
-        run: gradle --no-daemon build --stacktrace
+      - name: Build NeoForge 1.21.1 mod
+        run: gradle --no-daemon clean build --stacktrace
 
-      - name: Upload build artifact
+      - name: Verify isolated JAR resources
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          jars = sorted(Path("build/libs").glob("*.jar"))
+          if not jars:
+              raise RuntimeError("No build JAR found")
+          for jar in jars:
+              with ZipFile(jar) as zip_file:
+                  names = set(zip_file.namelist())
+                  expected = {
+                      "assets/vergilsdt/sdt_data/models/obj/sdt.obj",
+                      "assets/vergilsdt/sdt_data/textures/models/obj/sdt.png",
+                      "assets/vergilsdt/sdt_data/animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
+                      "assets/vergilsdt/sdt_data/animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json",
+                  }
+                  missing = expected - names
+                  unsafe = [name for name in names if name.startswith("assets/invincible_dmc/")]
+                  print("JAR:",jar.name, "bytes:",jar.stat().st_size)
+                  print("Isolated SDT resources:",sum(name.startswith("assets/vergilsdt/sdt_data/") for name in names))
+                  if missing:
+                      raise RuntimeError("Missing resource entries: " + str(missing))
+                  if unsafe:
+                      raise RuntimeError("Unexpected original Epic Fight asset paths: " + str(unsafe[:10]))
+          PY
+
+      - name: Upload playable JAR (unverified in-game)
         uses: actions/upload-artifact@v4
         with:
-          name: Vergil-SDT-Prototype-JAR
+          name: Vergil-SDT-NeoForge-1.21.1-v0.3.1
           path: build/libs/*.jar
           if-no-files-found: error

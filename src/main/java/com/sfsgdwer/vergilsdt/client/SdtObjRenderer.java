@@ -26,9 +26,9 @@ import org.joml.Quaternionf;
  */
 final class SdtObjRenderer {
     private static final ResourceLocation OBJ =
-        ResourceLocation.fromNamespaceAndPath("invincible_dmc", "models/obj/sdt.obj");
+        ResourceLocation.fromNamespaceAndPath("vergilsdt", "sdt_data/models/obj/sdt.obj");
     private static final ResourceLocation SKIN =
-        ResourceLocation.fromNamespaceAndPath("invincible_dmc", "textures/models/obj/sdt.png");
+        ResourceLocation.fromNamespaceAndPath("vergilsdt", "sdt_data/textures/models/obj/sdt.png");
 
     private static ResourceManager cachedManager;
     private static Model cachedModel;
