@@ -86,6 +86,32 @@ jobs:
               raise RuntimeError("Original Epic Fight resource namespace must not be bundled")
           PY
 
+      - name: Validate original weighted mesh format
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("src/main/resources/assets/vergilsdt/sdt_data/animmodels/entity/sin_devil_armor.json")
+          m = json.loads(path.read_text(encoding="utf-8"))["vertices"]
+          arr = lambda key: m[key]["array"]
+          points, counts, weights, pairs, triangles = (
+              arr("positions"), arr("vcounts"), arr("weights"),
+              arr("vindices"), m["parts"]["noGroups"]["array"]
+          )
+          assert len(points) == 3*len(counts), "Position count mismatch"
+          assert len(pairs) == 2*sum(counts), "Joint-weight pair mismatch"
+          assert len(triangles) % 9 == 0, "Triangle index stream malformed"
+          assert len(weights) > 0, "No skinning weights"
+          joints = set(pairs[::2])
+          assert all(0 <= i < 20 for i in joints), "Unexpected armature joint ID"
+          print("SKINNING CHECK:",
+                len(counts), "weighted vertices",
+                len(triangles)//9, "triangles",
+                len(weights), "weight values",
+                len(joints), "used bones")
+          PY
+
       - name: Build NeoForge 1.21.1 mod
         run: gradle --no-daemon clean build --stacktrace
 
@@ -104,6 +130,8 @@ jobs:
                   names = set(zip_file.namelist())
                   expected = {
                       "assets/vergilsdt/sdt_data/models/obj/sdt.obj",
+                      "assets/vergilsdt/sdt_data/animmodels/entity/sin_devil_armor.json",
+                      "assets/vergilsdt/sdt_data/textures/mesh/sin_devil/sin_devil.png",
                       "assets/vergilsdt/sdt_data/textures/models/obj/sdt.png",
                       "assets/vergilsdt/sdt_data/animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
                       "assets/vergilsdt/sdt_data/animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json",
@@ -121,6 +149,6 @@ jobs:
       - name: Upload playable JAR (unverified in-game)
         uses: actions/upload-artifact@v4
         with:
-          name: Vergil-SDT-NeoForge-1.21.1-v0.3.1
+          name: Vergil-SDT-NeoForge-1.21.1-v0.4.0
           path: build/libs/*.jar
           if-no-files-found: error

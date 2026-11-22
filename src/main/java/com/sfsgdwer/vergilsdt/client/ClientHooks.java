@@ -87,8 +87,19 @@ public final class ClientHooks {
             return;
         }
 
-        if (SdtObjRenderer.render(event, clip, Math.max(0F, elapsed))) {
-            event.setCanceled(true);
+        // Prefer true weighted mesh skinning; fall back to segmented OBJ preview
+        // if the original skinned mesh or texture resources cannot be parsed.
+        float playbackTime = Math.max(0F, elapsed);
+        boolean drawn;
+        try {
+            drawn = SdtWeightedRenderer.render(event, clip, playbackTime);
+        } catch (RuntimeException rendererError) {
+            System.err.println("[Vergil SDT] Weighted renderer failed: " + rendererError);
+            drawn = false;
         }
+        if (!drawn) {
+            drawn = SdtObjRenderer.render(event, clip, playbackTime);
+        }
+        if (drawn) event.setCanceled(true);
     }
 }
