@@ -1,0 +1,46 @@
+name: Inspect SDT Resources
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-sdt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read asset format and bone names
+        run: |
+          python3 - <<'PY'
+          import json,zipfile,re,statistics
+          path="SDT_Assets.zip"
+          with zipfile.ZipFile(path) as z:
+              names={n.replace('\\','/'):n for n in z.namelist()}
+              def read(name):
+                  return z.read(names["assets/invincible_dmc/"+name])
+              obj=read("models/obj/sdt.obj").decode('utf-8','replace')
+              groups=[x[2:] for x in obj.splitlines() if x.startswith('o ') or x.startswith('g ')]
+              print("OBJ OBJECTS:",groups)
+              vv=[list(map(float,x.split()[1:4])) for x in obj.splitlines() if x.startswith('v ')]
+              print("OBJ VERTEX BOUNDS X/Y/Z:",[(min(x[i] for x in vv),max(x[i] for x in vv)) for i in range(3)])
+              for name in ["animmodels/entity/sin_devil_armor.json",
+                "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
+                "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json"]:
+                  data=json.loads(read(name))
+                  print("FILE:", name)
+                  print("  KEYS:",list(data.keys()))
+                  if "animation" in data:
+                    print("  BONES:",[x.get("name") for x in data.get("animation",[])])
+                    for x in data.get("animation",[])[:12]:
+                      print("  BONE:", x.get('name'),"KEYFRAMES:",len(x.get("time",[])),"TIME:",x.get("time",[])[:3],
+                      "START:",x.get("transform",[{}])[0],"END:",x.get("transform",[{}])[-1])
+                  else:
+                    print("  VERTICES KEYS:",list(data.get("vertices",{}).keys()))
+                    print("  PART KEYS:",list(data.get("vertices",{}).get("parts",{}).keys()))
+          PY
