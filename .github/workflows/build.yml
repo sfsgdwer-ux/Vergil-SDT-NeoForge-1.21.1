@@ -54,8 +54,13 @@ jobs:
               extracted = []
               with ZipFile(archive) as zip_file:
                   for entry in zip_file.infolist():
-                      name = entry.filename
-                      if entry.is_dir() or not any(re.fullmatch(p, name) for p in patterns):
+                      source_name = entry.filename.replace("\\", "/")
+                      marker = "assets/invincible_dmc/"
+                      marker_index = source_name.find(marker)
+                      if marker_index < 0 or entry.is_dir():
+                          continue
+                      name = source_name[marker_index:]
+                      if not any(re.fullmatch(p, name) for p in patterns):
                           continue
                       target = (root / name).resolve()
                       if not target.is_relative_to(root):
@@ -64,9 +69,23 @@ jobs:
                       target.write_bytes(zip_file.read(entry))
                       extracted.append(name)
 
+              print("First archive entries:", zip_file.namelist()[:6])
               print(f"Imported {len(extracted)} model/animation/texture files from {archive.name}:")
               for name in extracted:
                   print(" +", name)
+              armor_json = root / "assets/invincible_dmc/animmodels/entity/sin_devil_armor.json"
+              if armor_json.exists():
+                  import json
+                  obj = json.loads(armor_json.read_text(encoding="utf-8"))
+                  print("SDT ARMOR JSON root keys:", list(obj) if isinstance(obj, dict) else type(obj))
+                  print("SDT ARMOR JSON preview:", armor_json.read_text(encoding="utf-8")[:2200])
+              for anim_name in ("yamato_sin_devil_trigger.json","yamato_sin_devil_trigger_back.json"):
+                  anim = root / "assets/invincible_dmc/animmodels/animations/biped/yamato/living" / anim_name
+                  if anim.exists():
+                      import json
+                      obj = json.loads(anim.read_text(encoding="utf-8"))
+                      print("SDT ANIMATION:", anim_name, "keys:", list(obj) if isinstance(obj, dict) else type(obj))
+                      print("SDT ANIMATION preview:", anim.read_text(encoding="utf-8")[:1000])
               if not extracted:
                   raise RuntimeError("Uploaded SDT_Assets.zip contains no expected model resources")
           PY
