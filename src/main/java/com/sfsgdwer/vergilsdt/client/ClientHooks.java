@@ -27,6 +27,15 @@ public final class ClientHooks {
         "key.categories.vergilsdt"
     );
 
+    /** Full SDT OBJ is the safe default; the weighted armour mesh is a preview. */
+    static final KeyMapping WEIGHTED_PREVIEW = new KeyMapping(
+        "key.vergilsdt.preview_weighted",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_O,
+        "key.categories.vergilsdt"
+    );
+
+    private static boolean weightedPreview;
     private static boolean transformed;
     private static float switchedAtTick = -100000F;
     private static LocalPlayer previousPlayer;
@@ -46,6 +55,15 @@ public final class ClientHooks {
             transformed = false;
             switchedAtTick = -100000F;
             previousPlayer = player;
+        }
+
+        while (WEIGHTED_PREVIEW.consumeClick()) {
+            weightedPreview = !weightedPreview;
+            player.displayClientMessage(Component.translatable(
+                weightedPreview
+                    ? "message.vergilsdt.preview_weighted"
+                    : "message.vergilsdt.preview_full"
+            ), true);
         }
 
         while (TRANSFORM.consumeClick()) {
@@ -87,19 +105,39 @@ public final class ClientHooks {
             return;
         }
 
-        // Prefer true weighted mesh skinning; fall back to segmented OBJ preview
-        // if the original skinned mesh or texture resources cannot be parsed.
+        // The original weighted asset is a PARTIAL ARMOUR mesh. Rendering it
+        // alone hides the complete SDT body and makes the figure look broken.
+        // Draw the complete OBJ-based SDT model by default. Keep the experimental
+        // weighted renderer behind a separate preview key for development.
         float playbackTime = Math.max(0F, elapsed);
-        boolean drawn;
-        try {
-            drawn = SdtWeightedRenderer.render(event, clip, playbackTime);
-        } catch (RuntimeException rendererError) {
-            System.err.println("[Vergil SDT] Weighted renderer failed: " + rendererError);
-            drawn = false;
-        }
+        boolean drawn = weightedPreview
+            ? tryWeighted(event, clip, playbackTime)
+            : tryFullModel(event, clip, playbackTime);
         if (!drawn) {
-            drawn = SdtObjRenderer.render(event, clip, playbackTime);
+            drawn = weightedPreview
+                ? tryFullModel(event, clip, playbackTime)
+                : tryWeighted(event, clip, playbackTime);
         }
         if (drawn) event.setCanceled(true);
+    }
+
+    private static boolean tryFullModel(RenderPlayerEvent.Pre event,
+                                        String clip, float playbackTime) {
+        try {
+            return SdtObjRenderer.render(event, clip, playbackTime);
+        } catch (RuntimeException rendererError) {
+            System.err.println("[Vergil SDT] Full model renderer failed: " + rendererError);
+            return false;
+        }
+    }
+
+    private static boolean tryWeighted(RenderPlayerEvent.Pre event,
+                                       String clip, float playbackTime) {
+        try {
+            return SdtWeightedRenderer.render(event, clip, playbackTime);
+        } catch (RuntimeException rendererError) {
+            System.err.println("[Vergil SDT] Weighted preview failed: " + rendererError);
+            return false;
+        }
     }
 }
