@@ -14,5 +14,6 @@ public final class ModKeyMappings {
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(ClientHooks.TRANSFORM);
+        event.register(ClientHooks.WEIGHTED_PREVIEW);
     }
 }

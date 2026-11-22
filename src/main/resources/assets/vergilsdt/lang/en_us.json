@@ -2,5 +2,8 @@
   "key.vergilsdt.transform": "Toggle Sin Devil Trigger (3D)",
   "key.categories.vergilsdt": "Vergil SDT",
   "message.vergilsdt.enabled": "Transforming into SDT",
-  "message.vergilsdt.disabled": "Returning to human form"
+  "message.vergilsdt.disabled": "Returning to human form",
+  "key.vergilsdt.preview_weighted": "Toggle experimental weighted SDT preview (O)",
+  "message.vergilsdt.preview_weighted": "Experimental partial weighted SDT mesh",
+  "message.vergilsdt.preview_full": "Complete SDT model restored"
 }
