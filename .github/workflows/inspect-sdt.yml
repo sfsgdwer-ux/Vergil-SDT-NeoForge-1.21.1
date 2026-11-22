@@ -1,4 +1,4 @@
-name: Inspect SDT Resources
+name: Inspect SDT Weighted Mesh
 
 on:
   push:
@@ -15,32 +15,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Read asset format and bone names
+      - name: Analyze skin weights and animation bone identities
+        shell: bash
         run: |
           python3 - <<'PY'
-          import json,zipfile,re,statistics
-          path="SDT_Assets.zip"
-          with zipfile.ZipFile(path) as z:
-              names={n.replace('\\','/'):n for n in z.namelist()}
-              def read(name):
-                  return z.read(names["assets/invincible_dmc/"+name])
-              obj=read("models/obj/sdt.obj").decode('utf-8','replace')
-              groups=[x[2:] for x in obj.splitlines() if x.startswith('o ') or x.startswith('g ')]
-              print("OBJ OBJECTS:",groups)
-              vv=[list(map(float,x.split()[1:4])) for x in obj.splitlines() if x.startswith('v ')]
-              print("OBJ VERTEX BOUNDS X/Y/Z:",[(min(x[i] for x in vv),max(x[i] for x in vv)) for i in range(3)])
-              for name in ["animmodels/entity/sin_devil_armor.json",
-                "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
-                "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json"]:
-                  data=json.loads(read(name))
-                  print("FILE:", name)
-                  print("  KEYS:",list(data.keys()))
-                  if "animation" in data:
-                    print("  BONES:",[x.get("name") for x in data.get("animation",[])])
-                    for x in data.get("animation",[])[:12]:
-                      print("  BONE:", x.get('name'),"KEYFRAMES:",len(x.get("time",[])),"TIME:",x.get("time",[])[:3],
-                      "START:",x.get("transform",[{}])[0],"END:",x.get("transform",[{}])[-1])
-                  else:
-                    print("  VERTICES KEYS:",list(data.get("vertices",{}).keys()))
-                    print("  PART KEYS:",list(data.get("vertices",{}).get("parts",{}).keys()))
+          from collections import Counter
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          with ZipFile("SDT_Assets.zip") as z:
+              names={n.replace("\\","/"):n for n in z.namelist()}
+              def read(path):
+                  return z.read(names["assets/invincible_dmc/"+path])
+              model=json.loads(read("animmodels/entity/sin_devil_armor.json"))
+              v=model["vertices"]
+              print("MODEL FPS:",model.get("fps"))
+              for name in ("positions","uvs","normals","vcounts","weights","vindices"):
+                  x=v[name]
+                  a=x["array"]
+                  print("FIELD:",name,"stride",x["stride"],"count",x["count"],
+                        "array_length",len(a),"min",min(a),"max",max(a),
+                        "first20",a[:20])
+              counts=v["vcounts"]["array"]
+              indices=v["vindices"]["array"]
+              weights=v["weights"]["array"]
+              parts=v["parts"]["noGroups"]["array"]
+              print("COUNT SUM:",sum(counts),"VINDICES LEN:",len(indices),"EXPECTED:",2*sum(counts))
+              print("COUNTS:",dict(sorted(Counter(counts).items())))
+              print("INFLUENCE JOINT IDs:",sorted(set(indices[::2])))
+              print("INFLUENCE WEIGHT INDEX RANGE:",min(indices[1::2]),max(indices[1::2]))
+              print("MOST USED JOINTS:",Counter(indices[::2]).most_common())
+              print("WEIGHTS MAX/INDEX:",len(weights)-1)
+              print("TRIANGLE CORNER COUNT:",len(parts)//3)
+              print("TRIANGLE INDICES first 15:",parts[:45])
+              print("TRIANGLE COORD INDEX MAX:",max(parts[::3]))
+              print("TRIANGLE UV INDEX MAX:",max(parts[1::3]))
+              print("TRIANGLE NORM INDEX MAX:",max(parts[2::3]))
+              print("MESH BOUNDS:",[
+                  (min(v["positions"]["array"][j::3]),max(v["positions"]["array"][j::3]))
+                  for j in (0,1,2)
+              ])
+              pos=v["positions"]["array"]
+              offset=0
+              buckets={}
+              for i,n in enumerate(counts):
+                  if n:
+                      pairs=[(indices[offset+2*k],weights[indices[offset+2*k+1]]) for k in range(n)]
+                      offset+=2*n
+                      if sum(weight for joint,weight in pairs)>0:
+                          key=max(pairs,key=lambda p:p[1])[0]
+                          buckets.setdefault(key,[]).append((pos[3*i],pos[3*i+1],pos[3*i+2]))
+              for joint,xyz in sorted(buckets.items()):
+                  center=[sum(p[j] for p in xyz)/len(xyz) for j in range(3)]
+                  lo=[min(p[j] for p in xyz) for j in range(3)]
+                  hi=[max(p[j] for p in xyz) for j in range(3)]
+                  print("JOINT DOMINANT:",joint,"count",len(xyz),"centroid",center,"bounds",list(zip(lo,hi)))
+              clips=[
+                  "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger.json",
+                  "animmodels/animations/biped/yamato/living/yamato_sin_devil_trigger_back.json"
+              ]
+              for clip in clips:
+                  o=json.loads(read(clip))
+                  print("CLIP:",clip,"fps",o.get("fps"),"bones",[(i,x.get("name")) for i,x in enumerate(o["animation"])])
+                  print("CLIP TIME MAX:",max(max(x.get("time",[0])) for x in o["animation"]))
           PY
