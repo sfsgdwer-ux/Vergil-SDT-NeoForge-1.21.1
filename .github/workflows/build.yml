@@ -79,6 +79,19 @@ jobs:
                   obj = json.loads(armor_json.read_text(encoding="utf-8"))
                   print("SDT ARMOR JSON root keys:", list(obj) if isinstance(obj, dict) else type(obj))
                   print("SDT ARMOR JSON preview:", armor_json.read_text(encoding="utf-8")[:2200])
+                  def structure(v):
+                      if isinstance(v, dict):
+                          return {"kind":"dict","keys":list(v),"sample":{k:structure(x) for k,x in list(v.items())[:4]}}
+                      if isinstance(v, list):
+                          return {"kind":"list","length":len(v),"sample":v[:12] if not v or not isinstance(v[0],(dict,list)) else [structure(v[0])]}
+                      return v
+                  print("SDT ARMOR VERTICES SCHEMA:", {k:structure(v) for k,v in obj.get("vertices",{}).items()})
+                  print("SDT ARMOR FPS SCHEMA:", structure(obj.get("fps")))
+              obj_path = root / "assets/invincible_dmc/models/obj/sdt.obj"
+              if obj_path.exists():
+                  lines = obj_path.read_text(encoding="utf-8",errors="replace").splitlines()
+                  print("SDT OBJ:", "size",obj_path.stat().st_size,"lines",len(lines),"vertex",sum(x.startswith("v ") for x in lines),"faces",sum(x.startswith("f ") for x in lines))
+                  print("SDT OBJ header:",lines[:18])
               for anim_name in ("yamato_sin_devil_trigger.json","yamato_sin_devil_trigger_back.json"):
                   anim = root / "assets/invincible_dmc/animmodels/animations/biped/yamato/living" / anim_name
                   if anim.exists():
