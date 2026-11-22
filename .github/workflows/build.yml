@@ -3,6 +3,8 @@ name: Build NeoForge JAR
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -112,6 +114,10 @@ jobs:
                 len(joints), "used bones")
           PY
 
+      - name: Verify animation coordinate conversion
+        shell: bash
+        run: python3 scripts/validate_sdt_axes.py
+
       - name: Build NeoForge 1.21.1 mod
         run: gradle --no-daemon clean build --stacktrace
 
@@ -149,6 +155,6 @@ jobs:
       - name: Upload playable JAR (unverified in-game)
         uses: actions/upload-artifact@v4
         with:
-          name: Vergil-SDT-NeoForge-1.21.1-v0.4.0
+          name: Vergil-SDT-NeoForge-1.21.1-v0.4.1
           path: build/libs/*.jar
           if-no-files-found: error

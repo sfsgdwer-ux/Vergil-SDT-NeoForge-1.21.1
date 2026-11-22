@@ -1,6 +1,26 @@
 # Vergil SDT – NeoForge 1.21.1
 
-## v0.4.0: Actual weighted mesh deformation (experimental)
+## v0.4.1: Correct source animation axes (experimental)
+
+- **Bug fix:** convert original SDT animation translations and quaternion rotations
+  from source Z-up coordinates to the same Minecraft Y-up coordinate system
+  already used by the weighted mesh positions.
+- Reject invalid/non-finite animation quaternion data.
+- Add a coordinate-system regression test run by GitHub Actions.
+- The mesh weights, 20 source animation bone names, cosmetic-only behavior,
+  and OBJ fallback remain unchanged.
+- Still **not** an exact Epic Fight armature: bind pose, inverse bind matrices,
+  and fully correct pivots/hierarchy are not available in the original assets.
+- Minecraft in-game appearance (especially with Epic Fight) is **unverified**.
+
+**Testing:** Back up/remove the old JAR, install v0.4.1, press F5 then V, watch
+both arms/legs and their seams while standing, moving and transforming. Revert
+with V again. If any limb twists or points the wrong way, send a screenshot
+plus `latest.log`. v0.4.0 remains the known compilation baseline for comparison.
+
+
+
+## v0.4.0 baseline: Actual weighted mesh deformation (experimental)
 
 This version uses the original user-provided **sin_devil_armor.json weighted mesh**, instead of only animating separate OBJ groups.
 
@@ -31,7 +51,7 @@ This version uses the original user-provided **sin_devil_armor.json weighted mes
   This was addressed by namespace isolation in v0.3.1 and retained in v0.4.0.
 
 ### Download / install
-On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.0** artifact,
+On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.1** artifact,
 extract the inner JAR, remove all older Vergil SDT JARs from the Minecraft 1.21.1
 NeoForge mods folder, and use the new JAR.
 
