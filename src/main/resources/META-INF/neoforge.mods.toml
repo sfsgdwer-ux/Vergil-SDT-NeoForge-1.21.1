@@ -1,0 +1,27 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "vergilsdt"
+version = "0.1.0"
+displayName = "Vergil SDT Cosmetic (Prototype)"
+authors = "Community port"
+description = '''
+Prototype for a standalone Sin Devil Trigger cosmetic transformation.
+The original SDT player mesh and animations are NOT ported in this build.
+'''
+
+[[dependencies.vergilsdt]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.265,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vergilsdt]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "BOTH"
