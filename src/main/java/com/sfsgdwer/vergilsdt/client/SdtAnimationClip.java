@@ -14,7 +14,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.joml.Quaternionf;
 
-/** Reads original animation JSON; returns relative-to-first-frame bone transforms. */
+/**
+ * Reads original animation JSON; returns relative-to-first-frame bone transforms.
+ *
+ * Epic Fight's animation file and the weighted model use the same source
+ * coordinate system (Z-up). Our renderer changes vertex coordinates to
+ * Minecraft Y-up: (x, y, z) -> (x, z, -y). Translation AND quaternion vector
+ * parts must receive that same proper-rotation basis change. Leaving original
+ * quaternions unchanged rotates the skinned limbs about incorrect axes.
+ *
+ * This fixes axis conversion; it does not provide the missing inverse-bind
+ * matrices/accurate source armature.
+ */
 final class SdtAnimationClip {
     private static ResourceManager cachedManager;
     private static final Map<String, SdtAnimationClip> CACHE = new HashMap<>();
@@ -55,11 +66,25 @@ final class SdtAnimationClip {
                     JsonArray rot = transform.getAsJsonArray("rot");
                     if (loc == null || rot == null || loc.size() < 3 || rot.size() < 4)
                         throw new IllegalArgumentException("Invalid SDT bone data for " + name);
-                    // Epic Fight resource format: quaternion is [w, x, y, z].
-                    keys[i] = new Key(
-                        loc.get(0).getAsFloat(), loc.get(1).getAsFloat(), loc.get(2).getAsFloat(),
-                        new Quaternionf(rot.get(1).getAsFloat(), rot.get(2).getAsFloat(),
-                            rot.get(3).getAsFloat(), rot.get(0).getAsFloat())
+                    // Source animation coordinates are Z-up; weighted vertices
+                    // are rendered as (x, z, -y) in Minecraft's Y-up basis.
+                    float x = loc.get(0).getAsFloat();
+                    float y = loc.get(1).getAsFloat();
+                    float z = loc.get(2).getAsFloat();
+                    // Epic Fight stores quaternion components as [w, x, y, z].
+                    float qw = rot.get(0).getAsFloat();
+                    float qx = rot.get(1).getAsFloat();
+                    float qy = rot.get(2).getAsFloat();
+                    float qz = rot.get(3).getAsFloat();
+                    if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(z)
+                        || !Float.isFinite(qw) || !Float.isFinite(qx)
+                        || !Float.isFinite(qy) || !Float.isFinite(qz)
+                        || qw*qw + qx*qx + qy*qy + qz*qz < 0.000001F)
+                        throw new IllegalArgumentException("Invalid SDT animation transform for " + name);
+                    // The vector part of a quaternion transforms like any
+                    // rotation axis under a proper orthonormal basis change.
+                    keys[i] = new Key(x, z, -y,
+                        new Quaternionf(qx, qz, -qy, qw).normalize()
                     );
                 }
                 bones.put(name, new Bone(t, keys));
