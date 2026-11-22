@@ -1,5 +1,28 @@
 # Vergil SDT – NeoForge 1.21.1
 
+## v0.4.2: Complete SDT model by default (visual fix)
+
+**Why this fix:** A screenshot from v0.4.1 showed a fragmented, missing-body
+SDT in third person. An offline rendering of the *unanimated* original weighted
+asset reproduces the same incomplete appearance. The repository contains two
+different geometric resources:
+- `sin_devil_armor.json` — partial skinned armour model (1,591 vertices).
+- `sdt.obj` — a separately exported complete Blockbench SDT model (6,360 vertices,
+  4,770 quad faces and 795 named components) with its own full-resolution texture.
+
+The previous v0.4.x versions erroneously rendered the **partial armour asset
+alone as the whole transformation**. This version renders the **complete OBJ
+SDT model** by default, retaining animated body part estimates and texture.
+The weighted armor renderer is available for debugging with **O** (press
+again to restore the full model); this mode is deliberately NOT the default.
+**V** still transforms and reverts. The mod remains cosmetic only.
+
+This is a *source-backed appearance correction*, not an exact original Devil
+May Cry character rig. No in-game screenshot or Epic Fight compatibility
+testing has been performed for v0.4.2. The OBJ's procedural animations still
+use approximate pivots. A faithful skinned body will require a complete source
+mesh with original inverse bind matrices/armature.
+
 ## v0.4.1: Correct source animation axes (experimental)
 
 - **Bug fix:** convert original SDT animation translations and quaternion rotations
@@ -51,7 +74,7 @@ This version uses the original user-provided **sin_devil_armor.json weighted mes
   This was addressed by namespace isolation in v0.3.1 and retained in v0.4.0.
 
 ### Download / install
-On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.1** artifact,
+On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.2** artifact,
 extract the inner JAR, remove all older Vergil SDT JARs from the Minecraft 1.21.1
 NeoForge mods folder, and use the new JAR.
 
