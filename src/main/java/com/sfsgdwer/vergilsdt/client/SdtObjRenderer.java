@@ -55,17 +55,31 @@ final class SdtObjRenderer {
             if (event.getEntity().isCrouching()) stack.translate(0D, -0.10D, 0D);
 
             SdtAnimationClip original = clip == null ? null : SdtAnimationClip.load(clip);
+            // Use Minecraft's interpolated walk cycle, not an arbitrary tick
+            // clock. This keeps each leg/arm swing aligned with actual steps
+            // and naturally fades back to rest when movement stops.
             float speed = (float) Math.sqrt(event.getEntity()
                 .getDeltaMovement().horizontalDistanceSqr());
+            boolean sprinting = event.getEntity().isSprinting();
+            boolean crouching = event.getEntity().isCrouching();
+            boolean gliding = event.getEntity().isFallFlying();
+            boolean swimming = event.getEntity().isSwimming();
+            boolean airborne = !event.getEntity().onGround() && !gliding && !swimming;
+            float walkSpeed = event.getEntity().walkAnimation.speed(partial);
             float stride = original != null || event.getEntity().isPassenger()
-                ? 0F : Math.min(1F, speed * (event.getEntity().isSprinting() ? 7F : 11F));
-            float phase = (event.getEntity().tickCount + partial) *
-                (event.getEntity().isSprinting() ? 0.95F : 0.70F);
-            float breathing = Mth.sin((event.getEntity().tickCount + partial) * 0.10F);
+                ? 0F : Mth.clamp(Math.max(walkSpeed * 2F,
+                    speed * (sprinting ? 7F : 11F)), 0F, 1F);
+            float phase = event.getEntity().walkAnimation.position(partial) * 0.6662F;
+            float breathing = Mth.sin((event.getEntity().tickCount + partial) * 0.11F);
+            // Bone poses must be sampled once per frame, not once per OBJ part:
+            // there are hundreds of pieces and all pieces on a bone must share
+            // the exact same animation.
+            Map<String, SdtAnimationClip.Pose> clipPoses = new HashMap<>();
+            Map<String, LimbAngles> limbPoses = new HashMap<>();
 
             if (original == null) {
-                stack.translate(0D, breathing * 0.012F +
-                    Math.abs(Mth.sin(phase)) * 0.025F * stride, 0D);
+                stack.translate(0D, breathing * 0.009F +
+                    Math.abs(Mth.sin(phase)) * 0.022F * stride, 0D);
             }
 
             VertexConsumer sink = event.getMultiBufferSource()
@@ -79,17 +93,22 @@ final class SdtObjRenderer {
                     for (String bone : model.rig.chain(part.bone)) {
                         Pivot joint = model.rig.pivot(bone);
                         if (original != null) {
-                            SdtAnimationClip.Pose pose = original.sample(bone, seconds);
+                            SdtAnimationClip.Pose pose = clipPoses.computeIfAbsent(
+                                bone, key -> original.sample(key, seconds));
                             rotateAround(stack, joint, pose.rotation());
                             if (bone.equals("Root")) {
                                 stack.translate(pose.dx(), pose.dy(), pose.dz());
                             }
                         } else {
-                            float rx = proceduralAngle(bone, phase, stride, breathing,
-                                event.getEntity().isFallFlying(), event.getEntity().isSwimming());
-                            if (Math.abs(rx) > 0.001F) {
+                            LimbAngles pose = limbPoses.computeIfAbsent(bone,
+                                key -> proceduralPose(key, phase, stride, breathing,
+                                    sprinting, crouching, airborne, gliding, swimming));
+                            if (Math.abs(pose.x) > 0.001F || Math.abs(pose.z) > 0.001F) {
                                 stack.translate(joint.x, joint.y, joint.z);
-                                stack.mulPose(Axis.XP.rotationDegrees(rx));
+                                if (Math.abs(pose.z) > 0.001F)
+                                    stack.mulPose(Axis.ZP.rotationDegrees(pose.z));
+                                if (Math.abs(pose.x) > 0.001F)
+                                    stack.mulPose(Axis.XP.rotationDegrees(pose.x));
                                 stack.translate(-joint.x, -joint.y, -joint.z);
                             }
                         }
@@ -116,29 +135,85 @@ final class SdtObjRenderer {
         return true;
     }
 
-    private static float proceduralAngle(String bone, float phase, float stride,
-                                         float breathing, boolean gliding, boolean swimming) {
-        float swing = Mth.sin(phase) * stride * 30F;
-        if (gliding || swimming) {
+    /**
+     * Small cosmetic animations on the full segmented OBJ rig.
+     * X rotates limbs forward/backward; Z gives shoulders a subtle side sway.
+     * Both arms and both legs have opposite phases; elbows and knees flex,
+     * and idle breathing prevents the model from looking frozen.
+     * The geometry keeps the same underlying body and remains cosmetic only.
+     */
+    private static LimbAngles proceduralPose(String bone, float phase, float stride,
+                                             float breath, boolean sprinting,
+                                             boolean crouching, boolean airborne,
+                                             boolean gliding, boolean swimming) {
+        float pulse = Mth.sin(phase);
+        float walk = stride * (sprinting ? 52F : crouching ? 21F : 36F);
+        float swing = pulse * walk;
+        float idle = breath * (1F - stride);
+        float rightKnee = Math.max(0F, -pulse) * stride * (sprinting ? 28F : 17F);
+        float leftKnee = Math.max(0F, pulse) * stride * (sprinting ? 28F : 17F);
+        float elbowFlex = sprinting ? 22F : crouching ? 13F : 7F;
+
+        if (gliding) {
             return switch (bone) {
-                case "Arm_R", "Arm_L" -> -35F;
-                case "Thigh_R", "Thigh_L" -> 9F;
-                case "Chest" -> -8F;
-                default -> 0F;
+                case "Arm_R", "Arm_L" -> new LimbAngles(-74F, 0F);
+                case "Elbow_R", "Elbow_L" -> new LimbAngles(-9F, 0F);
+                case "Thigh_R", "Thigh_L" -> new LimbAngles(13F, 0F);
+                case "Leg_R", "Leg_L" -> new LimbAngles(5F, 0F);
+                case "Chest" -> new LimbAngles(-10F, 0F);
+                default -> LimbAngles.ZERO;
             };
         }
+
+        if (swimming) {
+            float paddle = Mth.sin(phase * 1.8F) * 14F;
+            return switch (bone) {
+                case "Arm_R" -> new LimbAngles(-48F + paddle, -5F);
+                case "Arm_L" -> new LimbAngles(-48F - paddle, 5F);
+                case "Elbow_R", "Elbow_L" -> new LimbAngles(-15F, 0F);
+                case "Thigh_R" -> new LimbAngles(12F + paddle * 0.45F, 0F);
+                case "Thigh_L" -> new LimbAngles(12F - paddle * 0.45F, 0F);
+                case "Chest" -> new LimbAngles(-7F, 0F);
+                default -> LimbAngles.ZERO;
+            };
+        }
+
+        if (airborne) {
+            return switch (bone) {
+                case "Arm_R" -> new LimbAngles(-18F, -3F);
+                case "Arm_L" -> new LimbAngles(-18F, 3F);
+                case "Elbow_R", "Elbow_L" -> new LimbAngles(-12F, 0F);
+                case "Thigh_R" -> new LimbAngles(-12F, 0F);
+                case "Thigh_L" -> new LimbAngles(8F, 0F);
+                case "Leg_R", "Leg_L" -> new LimbAngles(13F, 0F);
+                default -> LimbAngles.ZERO;
+            };
+        }
+
         return switch (bone) {
-            case "Arm_R" -> -swing * 0.70F;
-            case "Arm_L" -> swing * 0.70F;
-            case "Thigh_R" -> swing;
-            case "Thigh_L" -> -swing;
-            case "Elbow_R", "Elbow_L" -> Math.max(0F, -swing) * 0.16F;
-            case "Leg_R" -> Math.max(0F, swing) * 0.18F;
-            case "Leg_L" -> Math.max(0F, -swing) * 0.18F;
-            case "Head" -> breathing * 0.65F;
-            case "Chest" -> breathing * 0.6F;
-            default -> 0F;
+            case "Arm_R" -> new LimbAngles(-swing * 0.90F - 2F + idle * 2.4F,
+                -3F - 2F * stride);
+            case "Arm_L" -> new LimbAngles(swing * 0.90F - 2F - idle * 2.4F,
+                3F + 2F * stride);
+            case "Elbow_R" -> new LimbAngles(-elbowFlex - rightKnee * 0.60F, 0F);
+            case "Elbow_L" -> new LimbAngles(-elbowFlex - leftKnee * 0.60F, 0F);
+            case "Hand_R" -> new LimbAngles(breath * 2.2F, 0F);
+            case "Hand_L" -> new LimbAngles(-breath * 2.2F, 0F);
+            case "Thigh_R" -> new LimbAngles(swing, 0F);
+            case "Thigh_L" -> new LimbAngles(-swing, 0F);
+            case "Leg_R" -> new LimbAngles(rightKnee + (crouching ? 8F : 0F), 0F);
+            case "Leg_L" -> new LimbAngles(leftKnee + (crouching ? 8F : 0F), 0F);
+            case "Knee_R", "Knee_L" -> new LimbAngles(-4F * stride, 0F);
+            case "Head" -> new LimbAngles(breath * 1.2F, 0F);
+            case "Chest" -> new LimbAngles(breath * 1.0F - (sprinting ? 4F : 0F), 0F);
+            case "Torso" -> new LimbAngles(crouching ? 8F : 0F,
+                Mth.sin(phase * 2F) * 1.5F * stride);
+            default -> LimbAngles.ZERO;
         };
+    }
+
+    private record LimbAngles(float x, float z) {
+        static final LimbAngles ZERO = new LimbAngles(0F, 0F);
     }
 
     private static void rotateAround(PoseStack stack, Pivot p, Quaternionf rotation) {
