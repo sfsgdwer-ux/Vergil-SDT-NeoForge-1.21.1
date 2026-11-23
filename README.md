@@ -1,5 +1,16 @@
 # Vergil SDT – NeoForge 1.21.1
 
+## v0.4.3: animated arms and legs (experimental)
+
+- Walk/run use Minecraft's **interpolated walk cycle** for coordinated counter-swinging arms and legs instead of a tick-based sine wave.
+- Improved elbow and knee flexion, small hand/shoulder sway, visible idle breathing.
+- Crouch, jump/fall, swimming and elytra gliding have their own cosmetic poses.
+- Joint angles are evaluated **once per bone per frame**, rather than re-evaluating trigonometry for every OBJ part.
+- The **complete OBJ model stays the default**; press `O` only to preview the incomplete experimental weighted-armour renderer. Press `V` to transform/revert.
+- Still uses **estimated OBJ pivots**. This is not an exact source armature and visual Minecraft/Epic Fight behavior remains to be tested.
+
+**Test**: Install only the v0.4.3 JAR, F5 to third-person, V to transform. Check idle, walk, sprint, crouch, jump, swim, and gliding. Record a short clip or send screenshots if any arm/leg or accessory detaches.
+
 ## v0.4.2: Complete SDT model by default (visual fix)
 
 **Why this fix:** A screenshot from v0.4.1 showed a fragmented, missing-body
@@ -74,7 +85,7 @@ This version uses the original user-provided **sin_devil_armor.json weighted mes
   This was addressed by namespace isolation in v0.3.1 and retained in v0.4.0.
 
 ### Download / install
-On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.2** artifact,
+On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.3** artifact,
 extract the inner JAR, remove all older Vergil SDT JARs from the Minecraft 1.21.1
 NeoForge mods folder, and use the new JAR.
 
