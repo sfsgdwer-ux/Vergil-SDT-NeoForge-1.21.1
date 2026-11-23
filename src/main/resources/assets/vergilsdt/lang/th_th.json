@@ -2,5 +2,8 @@
   "key.vergilsdt.transform": "แปลงร่าง Sin Devil Trigger (3D)",
   "key.categories.vergilsdt": "Vergil SDT",
   "message.vergilsdt.enabled": "กำลังแปลงร่างเป็น SDT",
-  "message.vergilsdt.disabled": "กำลังคืนร่างมนุษย์"
+  "message.vergilsdt.disabled": "กำลังคืนร่างมนุษย์",
+  "key.vergilsdt.preview_weighted": "แสดงโมเดล Weighted Mesh รุ่นทดลอง (O)",
+  "message.vergilsdt.preview_weighted": "ทดลองโมเดล Weighted Mesh (ไม่สมบูรณ์)",
+  "message.vergilsdt.preview_full": "กลับสู่โมเดล SDT เต็มตัว"
 }

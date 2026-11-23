@@ -1,6 +1,60 @@
 # Vergil SDT – NeoForge 1.21.1
 
-## v0.4.0: Actual weighted mesh deformation (experimental)
+## v0.4.3: animated arms and legs (experimental)
+
+- Walk/run use Minecraft's **interpolated walk cycle** for coordinated counter-swinging arms and legs instead of a tick-based sine wave.
+- Improved elbow and knee flexion, small hand/shoulder sway, visible idle breathing.
+- Crouch, jump/fall, swimming and elytra gliding have their own cosmetic poses.
+- Joint angles are evaluated **once per bone per frame**, rather than re-evaluating trigonometry for every OBJ part.
+- The **complete OBJ model stays the default**; press `O` only to preview the incomplete experimental weighted-armour renderer. Press `V` to transform/revert.
+- Still uses **estimated OBJ pivots**. This is not an exact source armature and visual Minecraft/Epic Fight behavior remains to be tested.
+
+**Test**: Install only the v0.4.3 JAR, F5 to third-person, V to transform. Check idle, walk, sprint, crouch, jump, swim, and gliding. Record a short clip or send screenshots if any arm/leg or accessory detaches.
+
+## v0.4.2: Complete SDT model by default (visual fix)
+
+**Why this fix:** A screenshot from v0.4.1 showed a fragmented, missing-body
+SDT in third person. An offline rendering of the *unanimated* original weighted
+asset reproduces the same incomplete appearance. The repository contains two
+different geometric resources:
+- `sin_devil_armor.json` — partial skinned armour model (1,591 vertices).
+- `sdt.obj` — a separately exported complete Blockbench SDT model (6,360 vertices,
+  4,770 quad faces and 795 named components) with its own full-resolution texture.
+
+The previous v0.4.x versions erroneously rendered the **partial armour asset
+alone as the whole transformation**. This version renders the **complete OBJ
+SDT model** by default, retaining animated body part estimates and texture.
+The weighted armor renderer is available for debugging with **O** (press
+again to restore the full model); this mode is deliberately NOT the default.
+**V** still transforms and reverts. The mod remains cosmetic only.
+
+This is a *source-backed appearance correction*, not an exact original Devil
+May Cry character rig. No in-game screenshot or Epic Fight compatibility
+testing has been performed for v0.4.2. The OBJ's procedural animations still
+use approximate pivots. A faithful skinned body will require a complete source
+mesh with original inverse bind matrices/armature.
+
+## v0.4.1: Correct source animation axes (experimental)
+
+- **Bug fix:** convert original SDT animation translations and quaternion rotations
+  from source Z-up coordinates to the same Minecraft Y-up coordinate system
+  already used by the weighted mesh positions.
+- Reject invalid/non-finite animation quaternion data.
+- Add a coordinate-system regression test run by GitHub Actions.
+- The mesh weights, 20 source animation bone names, cosmetic-only behavior,
+  and OBJ fallback remain unchanged.
+- Still **not** an exact Epic Fight armature: bind pose, inverse bind matrices,
+  and fully correct pivots/hierarchy are not available in the original assets.
+- Minecraft in-game appearance (especially with Epic Fight) is **unverified**.
+
+**Testing:** Back up/remove the old JAR, install v0.4.1, press F5 then V, watch
+both arms/legs and their seams while standing, moving and transforming. Revert
+with V again. If any limb twists or points the wrong way, send a screenshot
+plus `latest.log`. v0.4.0 remains the known compilation baseline for comparison.
+
+
+
+## v0.4.0 baseline: Actual weighted mesh deformation (experimental)
 
 This version uses the original user-provided **sin_devil_armor.json weighted mesh**, instead of only animating separate OBJ groups.
 
@@ -31,7 +85,7 @@ This version uses the original user-provided **sin_devil_armor.json weighted mes
   This was addressed by namespace isolation in v0.3.1 and retained in v0.4.0.
 
 ### Download / install
-On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.0** artifact,
+On [GitHub Actions](../../actions), download latest successful **Vergil-SDT-NeoForge-1.21.1-v0.4.3** artifact,
 extract the inner JAR, remove all older Vergil SDT JARs from the Minecraft 1.21.1
 NeoForge mods folder, and use the new JAR.
 

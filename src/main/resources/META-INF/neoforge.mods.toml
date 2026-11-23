@@ -4,11 +4,11 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "vergilsdt"
-version = "0.4.0"
-displayName = "Vergil SDT Cosmetic (Weighted Mesh Preview)"
+version = "0.4.3"
+displayName = "Vergil SDT Cosmetic (Animated Limbs v0.4.3)"
 authors = "Community port"
 description = '''
-Experimental client-side weighted SDT mesh skinning using original vertex weights, approximate bone pivots, original SDT keyframes and procedural movement.
+Full SDT OBJ cosmetic model with interpolated walk/run/idle limb animation, elbows/knees, swimming/gliding/jumping poses, optional weighted armor preview. No powers or hitbox changes.
 This is not the original Epic Fight armature system.
 '''
 
